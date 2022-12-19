@@ -19,6 +19,7 @@ classdef first_experiment
         position
         coordinate
         robot
+        accuracy
    end
    
    methods

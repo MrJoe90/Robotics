@@ -21,6 +21,8 @@ classdef second_experiment
         robot
         random_direction
         number_of_attemps
+        sensors_back
+        accuracy
    end
    
    methods
@@ -36,7 +38,7 @@ classdef second_experiment
              
              %disp('inizio')
              errors_config=[];
-             self.logic_map = zeros(10,5);
+             self.logic_map = zeros(11,6);
              self.logic_map(1,2)=1;
              %self.logic_map(self.logic_map==0) = NaN; % Changing the value of x. If you need it preserved, save to a new variable.
              %h = plot(1:numel(self.logic_map),1:self.logic_map,'k.');
@@ -51,7 +53,7 @@ classdef second_experiment
              self.position=0;
              self.random_direction=3
              linkdata on;
-
+             self.accuracy = 0.9;
              if self.clientID>-1
                    disp ("Client connected..");
                    
@@ -61,6 +63,8 @@ classdef second_experiment
                   [gestore,self.front_right]=self.vrep.simxGetObjectHandle(self.clientID,'Front_Right',self.vrep.simx_opmode_oneshot_wait);
                   [gestore,self.sensorL]=self.vrep.simxGetObjectHandle(self.clientID,'Pioneer_p3dx_ultrasonicSensor1',self.vrep.simx_opmode_oneshot_wait);
                   [gestore,self.sensorR]=self.vrep.simxGetObjectHandle(self.clientID,'Pioneer_p3dx_ultrasonicSensor2',self.vrep.simx_opmode_oneshot_wait);
+                  [gestore,self.sensors_back]=self.vrep.simxGetObjectHandle(self.clientID,'Pioneer_p3dx_ultrasonicSensor7',self.vrep.simx_opmode_oneshot_wait);
+              
                   [gestore,self.robot]=self.vrep.simxGetObjectHandle(self.clientID,'Robot_Learning',self.vrep.simx_opmode_oneshot_wait);
                 
                   [gestore,self.position] = self.vrep.simxGetObjectPosition(self.clientID,self.robot,-1,self.vrep.simx_opmode_streaming);
@@ -90,10 +94,11 @@ classdef second_experiment
           [errorCode, detectionState1, detectedPoint1, detectedObjectHandle, detectedSurfaceNormalVector] = self.vrep.simxReadProximitySensor(self. clientID, self.front_left, self.vrep.simx_opmode_streaming);
           [errorCode, detectionState3, detectedPoint3, detectedObjectHandle, detectedSurfaceNormalVector] = self.vrep.simxReadProximitySensor(self.clientID, self.sensorL, self.vrep.simx_opmode_streaming);
           [errorCode, detectionState4, detectedPoint4, detectedObjectHandle, detectedSurfaceNormalVector] = self.vrep.simxReadProximitySensor(self.clientID, self.sensorR, self.vrep.simx_opmode_streaming);
+          [errorCode, detectionState5, detectedPoint5, detectedObjectHandle, detectedSurfaceNormalVector] = self.vrep.simxReadProximitySensor(self.clientID, self.sensors_back, self.vrep.simx_opmode_streaming);
           [gestore,self.position] = self.vrep.simxGetObjectPosition(self.clientID,self.robot,-1,self.vrep.simx_opmode_buffer);
           disp(self.position)
 
-         if detectionState1==1 | detectionState3==1 | detectionState4 == 1 
+         if detectionState1==1 | detectionState3==1 | detectionState4 == 1 | detectionState5==1
                  disp("sensors");
                  %disp(cast(detectedPoint1(2)*100,"int8"))
                  x= abs(self.position(1))+4.5
