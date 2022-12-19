@@ -17,6 +17,8 @@ classdef first_experiment
         keyboard_event
         speed
         position
+        coordinate
+        robot
    end
    
    methods
@@ -29,25 +31,38 @@ classdef first_experiment
              self.vrep=remApi('remoteApi'); 
              self.vrep.simxFinish(-1);  % ended all the pended connection
              self.clientID =self.vrep.simxStart('127.0.0.1',19999,true,true,5000,5);
-             self.map = plot(10,5);
+             
              %disp('inizio')
              errors_config=[];
              self.logic_map = zeros(10,5);
+             self.logic_map(1,2)=1;
+             %self.logic_map(self.logic_map==0) = NaN; % Changing the value of x. If you need it preserved, save to a new variable.
+             %h = plot(1:numel(self.logic_map),1:self.logic_map,'k.');
+             %set(h,'MarkerSize',24)
+             %xlim([0.5 numel(self.logic_map)+0.5])
+             self.map = sparse(self.logic_map);
+             spy(self.map);
              %self.logic_map = self.logic_map+1/2;
              self.current_x=0;
-             self.current_y=2; 
+             self.current_y=3; 
              self.speed=0.5;
              self.position=0;
+             
+             linkdata on;
 
              if self.clientID>-1
                    disp ("Client connected..");
+                   
                   [gestore,self.leftMotor]=self.vrep.simxGetObjectHandle(self.clientID,'Pioneer_p3dx_leftMotor',self.vrep.simx_opmode_oneshot_wait);
                   [gestore,self.rightMotor]=self.vrep.simxGetObjectHandle(self.clientID,'Pioneer_p3dx_rightMotor',self.vrep.simx_opmode_oneshot_wait);
                   [gestore,self.front_left]=self.vrep.simxGetObjectHandle(self.clientID,'Front_Left',self.vrep.simx_opmode_oneshot_wait);
                   [gestore,self.front_right]=self.vrep.simxGetObjectHandle(self.clientID,'Front_Right',self.vrep.simx_opmode_oneshot_wait);
                   [gestore,self.sensorL]=self.vrep.simxGetObjectHandle(self.clientID,'Pioneer_p3dx_ultrasonicSensor1',self.vrep.simx_opmode_oneshot_wait);
                   [gestore,self.sensorR]=self.vrep.simxGetObjectHandle(self.clientID,'Pioneer_p3dx_ultrasonicSensor2',self.vrep.simx_opmode_oneshot_wait);
-                  %[gestore,self.position]= self.vrep.simxGetObjectPosition(self.clientID,'Robot_Learning',-1,self.vrep.simx_opmode_streaming);
+                  [gestore,self.robot]=self.vrep.simxGetObjectHandle(self.clientID,'Robot_Learning',self.vrep.simx_opmode_oneshot_wait);
+                
+                  [gestore,self.position] = self.vrep.simxGetObjectPosition(self.clientID,self.robot,-1,self.vrep.simx_opmode_streaming);
+
                   for i=1: length(errors_config)
                      if errors_config(i)~= 0
                          disp('I cannot communicate properly with Coppelia due to an handler error');
@@ -80,29 +95,24 @@ classdef first_experiment
           [errorCode, detectionState1, detectedPoint1, detectedObjectHandle, detectedSurfaceNormalVector] = self.vrep.simxReadProximitySensor(self. clientID, self.front_left, self.vrep.simx_opmode_streaming);
           [errorCode, detectionState3, detectedPoint3, detectedObjectHandle, detectedSurfaceNormalVector] = self.vrep.simxReadProximitySensor(self.clientID, self.sensorL, self.vrep.simx_opmode_streaming);
           [errorCode, detectionState4, detectedPoint4, detectedObjectHandle, detectedSurfaceNormalVector] = self.vrep.simxReadProximitySensor(self.clientID, self.sensorR, self.vrep.simx_opmode_streaming);
+          [gestore,self.position] = self.vrep.simxGetObjectPosition(self.clientID,self.robot,-1,self.vrep.simx_opmode_buffer);
+          disp(self.position)
 
-         if detectionState1==1
+         if detectionState1==1 | detectionState3==1 | detectionState4 == 1 
                  disp("sensors 1");
-                 disp(cast(detectedPoint1(2)*100,"int8"))
-                 self.map(cast(detectedPoint1(2)*100,"int8"),0,'.', 'MarkerSize', 30);
+                 %disp(cast(detectedPoint1(2)*100,"int8"))
+                 x= abs(self.position(1))+4.5
+                 y= abs(self.position(2))+2
+                 self.logic_map(cast(x,"int8"),cast(y,"int8"))=1;
+                 self.map= sparse(self.logic_map);
+                 close all
+                 spy(self.map);
+
+                 %self.map(cast(detectedPoint1(2)*100,"int8"),cast(detectedPoint1(1)*100,"int8"),'.', 'MarkerSize', 30);
          else 
              disp ("Nothing in Range");
          end
 
-         if detectionState3==1
-                 disp("sensors 3");
-                 disp(cast(detectedPoint3(2)*100,"int8"))
-         else 
-            
-             disp ("Nothing in Range");
-         end
-
-         if detectionState4==1
-                 disp("sensors 4");
-                 disp(cast(detectedPoint4(2)*100,"int8"))
-         else 
-             disp ("Nothing in Range");
-         end
              pause(1);
       end
       disp("end@");
@@ -164,21 +174,5 @@ end
 
  
 
-
-  
-
-
- function main_thread(app)
-        
-        if app.first_sensors_call== true
-             [result_sensors,~,err] = app.vrep.simxReadProximitySensor(app.clientID,app.sensors,app.vrep.simx_opmode_streaming);
-             disp(result_sensors);
-             app.first_sensors_call=false;
-          else
-              [e1,d,C] = app.vrep.simxReadProximitySensor(app.clientID,app.sensors,app.vrep.simx_opmode_streaming);
-              error_velocity= app.vrep.simxSetJointTargetVelocity(app.clientID,app.leftwheel,0.2,app.vrep.simx_opmode_blocking);
-              error_velocity= app.vrep.simxSetJointTargetVelocity(app.clientID,app.rightwheel,0.2,app.vrep.simx_opmode_blocking);
-              [e1,d,C] = app.vrep.simxReadProximitySensor(app.clientID,app.sensors,app.vrep.simx_opmode_streaming);
-
-        end
- end
+ 
+ 
